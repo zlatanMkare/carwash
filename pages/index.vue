@@ -1,9 +1,11 @@
 <script setup>
 import { useLayout } from '@/layouts/composables/layout';
 import { ProductService } from '@/service/ProductService';
+import { CustomerService } from '@/service/CustomerService';
 import { onMounted, reactive, ref, watch } from 'vue';
 const { isDarkTheme } = useLayout();
 const products = ref(null);
+const drivers = ref(null);
 const lineData = reactive({
     labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
     datasets: [
@@ -30,13 +32,15 @@ const items = ref([
     { label: 'Remove', icon: 'pi pi-fw pi-minus' }
 ]);
 const lineOptions = ref(null);
+const visibleFull = ref(false);
 
 onMounted(() => {
     ProductService.getProductsSmall().then((data) => (products.value = data));
+    CustomerService.getCustomersSmall().then((data) => (drivers.value = data));
 });
 
 const formatCurrency = (value) => {
-    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return value.toLocaleString('da-DK', { style: 'currency', currency: 'DKK' });
 };
 
 const applyLightTheme = () => {
@@ -118,7 +122,7 @@ watch(
             <div class="card mb-0">
                 <div class="flex justify-content-between mb-3">
                     <div>
-                        <span class="block text-500 font-medium mb-3">Orders</span>
+                        <span class="block text-500 font-medium mb-3">Jobs</span>
                         <div class="text-900 font-medium text-xl">152</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-blue-100 border-round" style="width: 2.5rem; height: 2.5rem">
@@ -134,7 +138,7 @@ watch(
                 <div class="flex justify-content-between mb-3">
                     <div>
                         <span class="block text-500 font-medium mb-3">Revenue</span>
-                        <div class="text-900 font-medium text-xl">$2.100</div>
+                        <div class="text-900 font-medium text-xl">122.100 Kr.</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-orange-100 border-round" style="width: 2.5rem; height: 2.5rem">
                         <i class="pi pi-map-marker text-orange-500 text-xl"></i>
@@ -148,14 +152,14 @@ watch(
             <div class="card mb-0">
                 <div class="flex justify-content-between mb-3">
                     <div>
-                        <span class="block text-500 font-medium mb-3">Customers</span>
-                        <div class="text-900 font-medium text-xl">28441</div>
+                        <span class="block text-500 font-medium mb-3">Drivers</span>
+                        <div class="text-900 font-medium text-xl">28</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-cyan-100 border-round" style="width: 2.5rem; height: 2.5rem">
                         <i class="pi pi-inbox text-cyan-500 text-xl"></i>
                     </div>
                 </div>
-                <span class="text-green-500 font-medium">520 </span>
+                <span class="text-green-500 font-medium">2 </span>
                 <span class="text-500">newly registered</span>
             </div>
         </div>
@@ -163,7 +167,7 @@ watch(
             <div class="card mb-0">
                 <div class="flex justify-content-between mb-3">
                     <div>
-                        <span class="block text-500 font-medium mb-3">Comments</span>
+                        <span class="block text-500 font-medium mb-3">Messages</span>
                         <div class="text-900 font-medium text-xl">152 Unread</div>
                     </div>
                     <div class="flex align-items-center justify-content-center bg-purple-100 border-round" style="width: 2.5rem; height: 2.5rem">
@@ -175,31 +179,45 @@ watch(
             </div>
         </div>
 
-        <div class="col-12 xl:col-6">
+        <div class="col-12 xl:col-12">
             <div class="card">
-                <h5>Recent Sales</h5>
+                <h5>Current Jobs</h5>
                 <DataTable :value="products" :rows="5" :paginator="true" responsiveLayout="scroll">
-                    <Column style="width: 15%">
+                    <!-- <Column style="width: 15%">
                         <template #header> Image </template>
                         <template #body="slotProps">
-                            <img :src="'/demo/images/product/' + slotProps.data.image" :alt="slotProps.data.image" width="50" class="shadow-2" />
+                            <img :src="slotProps.data.carImage" :alt="slotProps.data.carType" width="50" class="shadow-2" />
                         </template>
-                    </Column>
-                    <Column field="name" header="Name" :sortable="true" style="width: 35%"></Column>
-                    <Column field="price" header="Price" :sortable="true" style="width: 35%">
+                    </Column> -->
+                    <Column field="carType" header="Car Type" style="width: 25%"></Column>
+                    <Column field="owner" header="Job by" style="width: 25%"></Column>
+                    <Column field="price" header="Price" :sortable="true" style="width: 15%">
                         <template #body="slotProps">
                             {{ formatCurrency(slotProps.data.price) }}
                         </template>
                     </Column>
+                    <Column field="location" header="Location" style="width: 25%">
+                        <template #body="slotProps">
+                            {{ slotProps.data.location }}
+                        </template>
+                    </Column>
+                    <Column field="status" header="Status" style="width: 15%">
+                        <template #body="slotProps">
+                            <Tag v-if="slotProps.data.status === 'in progress'" class="mr-2" severity="info" :value="slotProps.data.status"></Tag>
+                            <Tag v-if="slotProps.data.status === 'Finished'" class="mr-2" severity="success" :value="slotProps.data.status"></Tag>
+                            <Tag v-if="slotProps.data.status === 'Not started'" class="mr-2" severity="warning" :value="slotProps.data.status"></Tag>
+
+                        </template>
+                    </Column>
                     <Column style="width: 15%">
-                        <template #header> View </template>
-                        <template #body>
-                            <Button icon="pi pi-search" type="button" class="p-button-text"></Button>
+                        <template #header> Assign Job </template>
+                        <template #body="slotProps">
+                            <Button label="Assign" type="button" @click="visibleFull = true" :disabled="slotProps.data.status !== 'Not started'"></Button>
                         </template>
                     </Column>
                 </DataTable>
             </div>
-            <div class="card">
+            <!-- <div class="card">
                 <div class="flex justify-content-between align-items-center mb-5">
                     <h5>Best Selling Products</h5>
                     <div>
@@ -281,9 +299,39 @@ watch(
                         </div>
                     </li>
                 </ul>
-            </div>
+            </div> -->
         </div>
-        <div class="col-12 xl:col-6">
+
+        <Sidebar v-model:visible="visibleFull" :baseZIndex="1000" position="full">
+            <h1 style="font-weight: normal">Available Drivers</h1>
+
+            <DataTable :value="drivers" :rows="5" :paginator="true" responsiveLayout="scroll">
+                    <Column style="width: 15%">
+                        <template #header> Image </template>
+                        <template #body="slotProps">
+                            <Avatar :image="slotProps.data.image" :style="{ 'background-color': '#ffffff' }" size="xlarge" shape="circle"></Avatar>
+                        </template>
+                    </Column>
+                    <Column field="name" header="Name" style="width: 25%"></Column>
+                    <Column field="distance" header="Distance(km)" :sortable="true" style="width: 15%"></Column>
+                    <Column field="status" header="Status" style="width: 25%">
+                        <template #body="slotProps">
+                            <Tag v-if="slotProps.data.status === 'available'" class="mr-2" severity="success" :value="slotProps.data.status"></Tag>
+                            <Tag v-if="slotProps.data.status === 'Not available'" class="mr-2" severity="danger" :value="slotProps.data.status"></Tag>
+                        </template>
+                    </Column>
+                    <Column style="width: 15%">
+                        <template #header> Assign Job </template>
+                        <template #body>
+                            <router-link to="/driver" class="layout-topbar-logo">
+                                <Button label="Assign" type="button"></Button>
+                            </router-link>
+                        </template>
+                    </Column>
+                </DataTable>
+        </Sidebar>
+            
+        <!-- <div class="col-12 xl:col-6">
             <div class="card">
                 <h5>Sales Overview</h5>
                 <Chart type="line" :data="lineData" :options="lineOptions" />
@@ -350,6 +398,6 @@ watch(
                     <a href="https://www.primefaces.org/primeblocks-vue" class="p-button font-bold px-5 py-3 p-button-warning p-button-rounded p-button-raised"> Get Started </a>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 </template>
